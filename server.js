@@ -1,20 +1,17 @@
 const express = require("express");
 require("dotenv").config();
-// const helmet = require('helmet'); // optional
-// const morgan = require('morgan'); // optional
-
+const userRouter = require("./routes/userRoute");
 const authorsRouter = require("./routes/authorRoute");
 const booksRouter = require("./routes/bookRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
-
 const cors = require("cors");
-
 const app = express(); // <<< MUST be declared first
 
-// CORS
-app.use(cors({
-  origin: "http://localhost:3000",
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+  })
+);
 
 // Body parsers
 app.use(express.json());
@@ -27,9 +24,10 @@ app.use(express.urlencoded({ extended: false }));
 // Routes
 app.use("/api/authorRoutes", authorsRouter);
 app.use("/api/bookRoutes", booksRouter);
+app.use("/api/userRoutes", userRouter);
 
 // fallback 404
-app.use((req, res, next) => res.status(404).json({ error: "Not Found" }));
+app.use((req, res, next) => res.status(404).json({ error: "Not Foundssss" }));
 
 // centralized error handler
 app.use(errorHandler);

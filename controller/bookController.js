@@ -22,7 +22,7 @@ async function postBook(req, res) {
     // const existedAuthor = await Author.findByPk(authorId);
     // if (!existedAuthor) {
     //   return res.status(404).json({ error: "Author does not exist" });
-    // }
+    // }w
     if (publishedDate && isNaN(Date.parse(publishedDate))) {
       return res.status(400).json({ error: "Published date is invalid" });
     }
