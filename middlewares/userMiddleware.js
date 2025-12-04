@@ -1,25 +1,33 @@
 // middlewares/validateAuthor.js
-const yup = require("yup");
+const Joi = require("joi");
 
-// Define schema
-const userSchema = yup.object().shape({
-  name: yup.string().min(3).required("Name is required"),
-  email: yup
-    .string()
-    .email("Invalid email format")
-    .required("Email is required"),
-  password: yup.number().min(2).max(10).required("Password is required"),
+// Joi Schema
+const userSchema = Joi.object({
+  name: Joi.string().min(3).required().messages({
+    "string.empty": "Name is required",
+    "string.min": "Name must be at least 3 characters",
+  }),
+
+  email: Joi.string().email().required().messages({
+    "string.empty": "Email is required",
+    "string.email": "Invalid email format",
+  }),
+
+  password: Joi.string().min(2).required().messages({
+    "string.empty": "Password is required",
+    "string.min": "Password must be at least 2 characters",
+  }),
 });
 
-// Middleware
-const validateUser = async (req, res, next) => {
-  try {
-    await userSchema.validate(req.body, { abortEarly: false });
-    next(); // Validation passed
-  } catch (err) {
-    // Return all validation errors
-    return res.status(400).json({ errors: err.errors });
+const validateUser = (req, res, next) => {
+  const { error } = userSchema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const messages = error.details.map((err) => err.message);
+    return res.status(400).json({ errors: messages });
   }
+
+  next();
 };
 
 module.exports = validateUser;

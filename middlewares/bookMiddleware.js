@@ -1,32 +1,41 @@
 // middlewares/validateBook.js
-const yup = require("yup");
+const Joi = require("joi");
 
 // Define the schema
-const bookSchema = yup.object().shape({
-  title: yup.string().min(4).max(20).required("Title is required"),
-  isbn: yup.string().required("ISBN is required"),
-  publishedDate: yup
-    .date()
-    .nullable()
-    .typeError("Published date must be a valid date"),
-  authorId: yup
-    .number()
-    .required("Author ID is required")
-    .integer("Author ID must be an integer")
-    .positive("Author ID must be a positive number"),
+const bookSchema = Joi.object({
+  title: Joi.string().min(4).max(20).required().messages({
+    "string.empty": "Title is required",
+    "string.min": "Title must be at least 4 characters",
+    "string.max": "Title cannot exceed 20 characters",
+  }),
+
+  isbn: Joi.string().required().messages({
+    "string.empty": "ISBN is required",
+  }),
+
+  publishedDate: Joi.date().messages({
+    "date.base": "Published date must be a valid date",
+  }),
+
+  authorId: Joi.number().integer().positive().required().messages({
+    "number.base": "Author ID must be a number",
+    "number.integer": "Author ID must be an integer",
+    "number.positive": "Author ID must be a positive number",
+    "any.required": "Author ID is required",
+  }),
 });
 
-// Middleware
-const validateBook = async (req, res, next) => {
-  try {
-    await bookSchema.validate(req.body, { abortEarly: false });
-    next(); // Validation passed
-  } catch (err) {
+const validateBook = (req, res, next) => {
+  const { error } = bookSchema.validate(req.body, { abortEarly: false });
+
+  if (error) {
     return res.status(400).json({
       success: false,
-      errors: err.errors,
+      errors: error.details.map((err) => err.message),
     });
   }
+
+  next();
 };
 
 module.exports = validateBook;
