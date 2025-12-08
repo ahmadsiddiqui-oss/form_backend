@@ -17,9 +17,21 @@ module.exports = (sequelize) => {
       unique: true,
       validate: { isEmail: true },
     },
-    password: {
-      type: DataTypes.NUMBER,
+    hashPassword: {
+      type: DataTypes.STRING,
       allowNull: false,
+    },
+    authToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetTokenExpiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   });
   return User;
