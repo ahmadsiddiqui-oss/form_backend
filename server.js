@@ -1,6 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 const userRouter = require("./routes/userRoute");
+const authRouter = require("./routes/authRoute");
 const authorsRouter = require("./routes/authorRoute");
 const booksRouter = require("./routes/bookRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -25,9 +26,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/api/authorRoutes", authorsRouter);
 app.use("/api/bookRoutes", booksRouter);
 app.use("/api/userRoutes", userRouter);
+app.use("/api/authRoutes", authRouter);
 
 // fallback 404
-app.use((req, res, next) => res.status(404).json({ error: "Not Foundssss" }));
+app.use((req, res, next) => res.status(404).json({ error: "Not Founds!" }));
 
 // centralized error handler
 app.use(errorHandler);

@@ -51,6 +51,7 @@ async function updateAuthor(req, res) {
     if (!id)
       return res.status(400).json({ error: "id is required for update" });
     const author = await Author.findByPk(id);
+    console.log(id);
     if (!author) return res.status(404).json({ error: "Author not found" });
     await author.update({ id, name, email });
     return res.json(author);
