@@ -95,7 +95,7 @@ const auth = async (req, res, next) => {
           authToken: token,
         },
       });
-      console.log(user.id, "<<Authenticated user>>");
+      // console.log(user.id, "<<Authenticated user>>");
       if (!user) {
         return res
           .status(401)
@@ -104,7 +104,7 @@ const auth = async (req, res, next) => {
       req.token = user;
       req.loginUser = user;
       // req.params.id = user.id;
-      console.log(req.loginUser.id, "<<loginUser-id>>");
+      // console.log(req.loginUser.id, "<<loginUser-id>>");
       next();
     } else {
       res.status(401).json({ error: "No token provided" });
@@ -248,7 +248,6 @@ async function validateForgotPassword(req, res, next) {
   }
 }
 
-
 function authorizeRoles(...allowedRoles) {
   return (req, res, next) => {
     const userRole = req.loginUser.role;
@@ -262,7 +261,6 @@ function authorizeRoles(...allowedRoles) {
   };
 }
 
-
 // function authorizeRoles(...allowedRoles) {
 //   return (req, res, next) => {
 //     if (!allowedRoles.includes(req.user.role)) {
@@ -273,7 +271,6 @@ function authorizeRoles(...allowedRoles) {
 //     next();
 //   };
 // }
-
 
 // middleware/role.js
 // function authorize(allowedRoles = []) {

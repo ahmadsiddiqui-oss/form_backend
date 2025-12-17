@@ -20,6 +20,15 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      role: {
+        type: Sequelize.ENUM("Admin", "Manager", "User"),
+        defaultValue: "User",
+        allowNull: false,
+      },
+      profileImage: {
+        type: Sequelize.JSON,
+        allowNull: true,
+      },
       authToken: {
         type: Sequelize.STRING,
         allowNull: true,
@@ -31,11 +40,6 @@ module.exports = {
       resetTokenExpiry: {
         type: Sequelize.DATE,
         allowNull: true,
-      },
-      role: {
-        type: Sequelize.ENUM("Admin", "Manager", "User"),
-        defaultValue: "User",
-        allowNull: false,
       },
       createdAt: {
         allowNull: false,

@@ -37,6 +37,10 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM("Admin", "Manager", "User"), // roles
       defaultValue: "User",
     },
+    profileImage: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
   });
   return User;
 };

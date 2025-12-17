@@ -1,8 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const userController = require("../controller/userController.js");
-const { auth, validateLogin, validateLogout, validateForgotPassword, validateSignup, validateResetPassword } = require("../middlewares/userMiddleware");
-
+const {
+  auth,
+  validateLogin,
+  validateLogout,
+  validateForgotPassword,
+  validateSignup,
+  validateResetPassword,
+} = require("../middlewares/userMiddleware");
+const { uploadFile, upload } = require("../controller/fileController");
 // Auth Routes
 
 router.post("/login", validateLogin, userController.loginUser);
