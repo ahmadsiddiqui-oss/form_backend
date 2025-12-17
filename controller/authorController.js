@@ -1,6 +1,6 @@
 const db = require("../models/index.js");
 const { Author } = db;
-
+const paginate = require("../utils/paginate.js");
 // POST /authors
 async function postAuthor(req, res) {
   try {
@@ -22,8 +22,8 @@ async function postAuthor(req, res) {
 // GET /authors
 async function getAuthor(req, res) {
   try {
-    const authors = await Author.findAll();
-    // console.log(authors);
+    const authors = await paginate(Author, req.query, ["name", "email"]);
+    console.log(authors, "authors");
     return res.json(authors);
   } catch (err) {
     console.log({ error: err.message }, "eerrrrrrrororor>>>>>>");
@@ -31,7 +31,7 @@ async function getAuthor(req, res) {
   }
 }
 
-// GET /authors/:id
+// GET /authors/:id,
 async function getAuthorById(req, res) {
   try {
     const { id } = req.params;

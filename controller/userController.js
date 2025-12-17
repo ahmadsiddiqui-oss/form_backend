@@ -3,15 +3,16 @@ const { User } = db;
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/email");
+const paginate = require("../utils/paginate.js");
 
 // POST /login
 async function loginUser(req, res) {
   try {
     const user = req.user;
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "6h" }
     );
     user.authToken = token;
     await user.save();
@@ -23,6 +24,7 @@ async function loginUser(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (err) {
@@ -32,8 +34,9 @@ async function loginUser(req, res) {
 // POST /users with hashed password....!
 async function postUser(req, res) {
   try {
-    const { name, email, password } = req.body;
-    // console.log("Received data:", { name, email, password });
+    const { name, email, password, role } = req.body;
+    console.log("req.body", req.body);
+    console.log("Received data:", { name, email, password, role });
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -41,16 +44,17 @@ async function postUser(req, res) {
     const user = await User.create({
       name,
       email,
-      hashPassword: hashedPassword, // store hashed password
+      hashPassword: hashedPassword,
+      role,
     });
-    // console.log("User created:", user);
+    console.log("User created:", user);
     return res.status(201).json({
       message: "User created successfully",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        // password not sent!
+        role: user.role,
       },
     });
   } catch (err) {
@@ -122,11 +126,10 @@ async function resetPassword(req, res) {
 // GET /users
 async function getUser(req, res) {
   try {
-    const users = await User.findAll();
-    // console.log(Users);
-    return res.json(users);
+    const result = await paginate(User, req.query, ["name", "email"]); // search in name & email
+    return res.json(result);
   } catch (err) {
-    console.log({ error: err.message }, "eerrrrrrrororor>>>>>>");
+    console.log({ error: err.message }, "Error in getUser >>>>");
     return res.status(500).json({ error: err.message });
   }
 }

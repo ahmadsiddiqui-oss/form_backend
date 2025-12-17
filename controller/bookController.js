@@ -1,4 +1,5 @@
 const db = require("../models/index.js");
+const paginate = require("../utils/paginate.js");
 const { Book } = db;
 
 async function postBook(req, res) {
@@ -19,10 +20,6 @@ async function postBook(req, res) {
     if (!authorId) {
       return res.status(400).json({ error: "Author ID is required" });
     }
-    // const existedAuthor = await Author.findByPk(authorId);
-    // if (!existedAuthor) {
-    //   return res.status(404).json({ error: "Author does not exist" });
-    // }w
     if (publishedDate && isNaN(Date.parse(publishedDate))) {
       return res.status(400).json({ error: "Published date is invalid" });
     }
@@ -34,14 +31,20 @@ async function postBook(req, res) {
 }
 
 async function getBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
-    const rows = await Book.findAll({ order: [["id", "ASC"]] });
-    return res.json(rows);
+    const books = await paginate(
+      Book,
+      req.query,
+      ["title", "isbn"] // searchable fields
+    );
+
+    return res.json(books);
   } catch (err) {
+    console.log(err.message, "getBook error");
     return res.status(500).json({ error: err.message });
   }
 }
+
 
 async function getBookById(req, res) {
   // if (!book) return modelMissing(res);

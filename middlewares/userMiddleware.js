@@ -51,7 +51,7 @@ async function validateLogin(req, res, next) {
 
 async function validateSignup(req, res, next) {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     // 1. Check required fields
     if (!name) {
       return res.status(400).json({ error: "Name is required" });
@@ -66,6 +66,10 @@ async function validateSignup(req, res, next) {
     const emailExists = await User.findOne({ where: { email } });
     if (emailExists) {
       return res.status(400).json({ error: "Email already exists" });
+    }
+    const allowedRoles = ["Admin", "Manager", "User"];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
     }
     // Everything valid → continue
     next();
@@ -244,6 +248,43 @@ async function validateForgotPassword(req, res, next) {
   }
 }
 
+
+function authorizeRoles(...allowedRoles) {
+  return (req, res, next) => {
+    const userRole = req.loginUser.role;
+    console.log(userRole, "<<userRole>>");
+    if (!allowedRoles.includes(userRole)) {
+      console.log(allowedRoles, "allowedRoles");
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    next();
+  };
+}
+
+
+// function authorizeRoles(...allowedRoles) {
+//   return (req, res, next) => {
+//     if (!allowedRoles.includes(req.user.role)) {
+//       return res.status(403).json({
+//         error: "Access Denied"
+//       });
+//     }
+//     next();
+//   };
+// }
+
+
+// middleware/role.js
+// function authorize(allowedRoles = []) {
+//   return (req, res, next) => {
+//     if (!allowedRoles.includes(req.user.role)) {
+//       return res.status(403).json({ error: "Access denied" });
+//     }
+//     next();
+//   };
+// }
+
 module.exports = {
   auth,
   validateLogin,
@@ -253,4 +294,5 @@ module.exports = {
   validateLogout,
   validateResetPassword,
   validateForgotPassword,
+  authorizeRoles,
 };

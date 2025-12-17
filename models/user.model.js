@@ -33,6 +33,10 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    role: {
+      type: DataTypes.ENUM("Admin", "Manager", "User"), // roles
+      defaultValue: "User",
+    },
   });
   return User;
 };
