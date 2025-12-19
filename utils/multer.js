@@ -45,39 +45,3 @@ const upload = multer({
 });
 
 module.exports = upload;
-
-// const multer = require("multer");
-// const path = require("path");
-
-// // Configure storage engine and filename
-// const storage = multer.diskStorage({
-//   destination: "./uploads/",
-//   filename: function (req, file, cb) {
-//     cb(
-//       null,
-//       file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-//     );
-//   },
-// });
-
-// // Initialize upload middleware
-// const upload = multer({
-//   storage: storage,
-//   limits: { fileSize: 9000000 }, // 1MB file size limit
-// }).single("myFile"); // 'myFile' is the name attribute in the frontend form
-
-// // Upload handler
-// const uploadFile = (req, res) => {
-//   upload(req, res, (err) => {
-//     if (err) {
-//       console.error(err);
-//       return res.status(500).json({ error: err.message });
-//     }
-//     if (!req.file) {
-//       return res.status(400).json({ error: "Please send a file" });
-//     }
-
-//     res.json({ message: "File uploaded successfully!", file: req.file });
-//   });
-//   // next();
-// };

@@ -35,7 +35,7 @@ async function getBook(req, res) {
     const books = await paginate(
       Book,
       req.query,
-      ["title", "isbn"] // searchable fields
+      ["title"] // searchable fields
     );
 
     return res.json(books);
