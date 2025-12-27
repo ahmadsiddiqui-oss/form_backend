@@ -201,7 +201,7 @@ async function validateDeleteUser(req, res, next) {
 
     // 2. Check if user exists
     const user = await User.findByPk(id);
-    console.log(user,"User not found");
+    console.log(user, "User not found");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -222,7 +222,8 @@ async function validateResetPassword(req, res, next) {
     const { password } = req.body;
 
     // 1. Check if password is provided
-    if (!password) {x
+    if (!password) {
+      x;
       return res.status(400).json({ error: "Password is required" });
     }
 
@@ -276,7 +277,10 @@ function authorizeRoles(...allowedRoles) {
     console.log(req.loginUser.Role, "<<Full Role Object>>");
     console.log(userRole, "<<Extracted Role Name>>");
 
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    // Convert allowed roles to lowercase for case-insensitive comparison
+    const allowedRolesLower = allowedRoles.map((r) => r.toLowerCase());
+
+    if (!userRole || !allowedRolesLower.includes(userRole)) {
       console.log(allowedRoles, "allowedRoles");
       return res.status(403).json({ error: "Access deniedssssss" });
     }

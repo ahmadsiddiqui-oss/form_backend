@@ -33,6 +33,15 @@ async function loginUser(req, res) {
     );
     user.authToken = token;
     await user.save();
+    // Debug log to see what's being sent
+    console.log("Login Response User:", {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.Role ? user.Role.name : null,
+      profileImage: user.profileImage,
+    });
+
     // Success
     return res.json({
       message: "Login successful",
@@ -43,6 +52,7 @@ async function loginUser(req, res) {
         email: user.email,
         role: user.Role, // Returns full role object
         permissions: permissions,
+        profileImage: user.profileImage,
       },
     });
   } catch (err) {
@@ -99,7 +109,7 @@ async function postUser(req, res) {
         name: user.name,
         email: user.email,
         role: roleData, // Returns { id: ..., name: ... }
-        // roleId: user.roleId,
+        profileImage: user.profileImage,
       },
     });
   } catch (err) {
@@ -212,6 +222,14 @@ async function getUserById(req, res) {
     delete userData.Permissions;
 
     userData.allPermissions = allPermissions;
+    userData.profileImage = user.profileImage;
+
+    console.log("getUserById Response Data:", {
+      id: userData.id,
+      name: userData.name,
+      profileImage: userData.profileImage,
+    });
+
     return res.json(userData);
   } catch (err) {
     return res.status(500).json({ error: err.message });

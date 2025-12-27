@@ -1,5 +1,4 @@
-const { Role, Permission } = require("../models");
-const { User } = require("../models");
+const { Role, Permission, User } = require("../models");
 
 /**
  * Middleware to check if a user has a specific permission
@@ -25,8 +24,15 @@ function checkPermission(requiredPermission) {
       });
 
       if (!role) {
+        console.log("No role found for user");
         return res.status(403).json({ error: "User has no role assigned" });
       }
+
+      console.log("Role Name:", role.name);
+      console.log(
+        "Role Permissions:",
+        role.Permissions?.map((p) => p.name)
+      );
 
       // Check if role has the required permission
       const hasPermission = role.Permissions.some(
@@ -34,10 +40,27 @@ function checkPermission(requiredPermission) {
       );
 
       // Also check user's direct permissions (if any)
-      const userDirectPermissions = await user.getPermissions();
+      const userWithPermissions = await User.findByPk(user.id, {
+        include: [
+          {
+            model: Permission,
+            through: { attributes: [] },
+          },
+        ],
+      });
+
+      const userDirectPermissions = userWithPermissions?.Permissions || [];
+      console.log(
+        "Direct User Permissions:",
+        userDirectPermissions.map((p) => p.name)
+      );
+
       const hasDirectPermission = userDirectPermissions.some(
         (perm) => perm.name === requiredPermission
       );
+
+      console.log("Has permission from role?", hasPermission);
+      console.log("Has direct permission?", hasDirectPermission);
 
       if (!hasPermission && !hasDirectPermission) {
         return res.status(403).json({
