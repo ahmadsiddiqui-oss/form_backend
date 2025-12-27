@@ -1,7 +1,5 @@
-const { DataTypes } = require("sequelize");
-
-module.exports = (sequelize) => {
-  const User = sequelize.define("user", {
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define("User", {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -21,6 +19,10 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
+    roleId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
     authToken: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -33,14 +35,19 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
-    role: {
-      type: DataTypes.ENUM("Admin", "Manager", "User"), // roles
-      defaultValue: "User",
-    },
     profileImage: {
       type: DataTypes.JSON,
       allowNull: true,
     },
   });
+
+  User.associate = (models) => {
+    User.belongsTo(models.Role, { foreignKey: "roleId" });
+    User.belongsToMany(models.Permission, {
+      through: "UserPermissions",
+      foreignKey: "userId",
+    });
+  };
+
   return User;
 };

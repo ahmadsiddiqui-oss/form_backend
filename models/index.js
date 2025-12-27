@@ -3,8 +3,10 @@ dotenv.config();
 
 const { Sequelize, DataTypes } = require("sequelize");
 const defineAuthor = require("./author.model.js");
-const defineBook = require("./book.model.js"); // optional if you have Book
+const defineBook = require("./book.model.js");
 const defineUser = require("./user.model.js");
+const defineRole = require("./role.model.js");
+const definePermission = require("./permission.model.js");
 
 // DB config
 const DB_NAME = process.env.DB_NAME || "form_database";
@@ -26,11 +28,27 @@ const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASSWORD, {
 const Author = defineAuthor(sequelize, DataTypes);
 const Book = defineBook(sequelize, DataTypes);
 const User = defineUser(sequelize, DataTypes);
+const Role = defineRole(sequelize, DataTypes);
+const Permission = definePermission(sequelize, DataTypes);
+const RolePermissions = definePermission(sequelize, DataTypes); 
+// Create models object for associations
+const models = { Author, Book, User, Role, Permission };
 
-// associations
-Author.hasMany(Book, { foreignKey: "authorId", as: "books" });
-Book.belongsTo(Author, { foreignKey: "authorId", as: "author" });
+// Call associate methods for all models
+Object.keys(models).forEach((modelName) => {
+  if (models[modelName].associate) {
+    models[modelName].associate(models);
+  }
+});
 
 // export
-module.exports = { sequelize, Author, Book, User };
+module.exports = {
+  sequelize,
+  Author,
+  Book,
+  User,
+  Role,
+  Permission,
+  RolePermissions,
+};
 // module.export db;

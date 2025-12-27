@@ -1,7 +1,8 @@
 const { Op } = require("sequelize");
 
-async function paginate(model, queryParams, searchFields = []) {
+async function paginate(model, queryParams, searchFields = [], options = {}) {
   let { page, limit, sort, order, search } = queryParams;
+  const { include, attributes } = options;
 
   page = parseInt(page) || 1;
   limit = parseInt(limit) || 2;
@@ -23,7 +24,10 @@ async function paginate(model, queryParams, searchFields = []) {
     where,
     limit,
     offset,
+    offset,
     order: [[sort, order]],
+    include,
+    attributes,
   });
 
   const totalPages = Math.ceil(count / limit);

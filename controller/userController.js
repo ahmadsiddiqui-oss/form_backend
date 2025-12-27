@@ -1,18 +1,35 @@
 const db = require("../models/index.js");
-const { User } = db;
+const { User, Role, Permission } = db;
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
+const { getUserPermissions } = require("../middlewares/permissionMiddleware");
+const { include } = require("underscore");
 
 // POST /login
 async function loginUser(req, res) {
   try {
-    const user = req.user;
+    // Reload user with Role association
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: Role }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Get all permissions for this user (role-based + direct)
+    const permissions = await getUserPermissions(user.id);
+
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.Role ? user.Role.name : null,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "6h" }
+      { expiresIn: "2days" }
     );
     user.authToken = token;
     await user.save();
@@ -24,7 +41,8 @@ async function loginUser(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.Role, // Returns full role object
+        permissions: permissions,
       },
     });
   } catch (err) {
@@ -35,18 +53,44 @@ async function loginUser(req, res) {
 async function postUser(req, res) {
   try {
     const { name, email, password, role } = req.body;
-    console.log("req.body", req.body);
     console.log("Received data:", { name, email, password, role });
+
+    let roleData = null; // Object to store { id, name }
+    let selectedRoleId = null;
+
+    if (role) {
+      const roleRecord = await Role.findOne({ where: { id: role } });
+      if (!roleRecord) {
+        return res.status(400).json({ error: `Role '${role}' not found` });
+      }
+      // Store just the needed fields
+      roleData = { id: roleRecord.id, name: roleRecord.name };
+      selectedRoleId = roleRecord.id;
+    } else {
+      // If no role provided, look for a default 'User' role
+      const defaultRole = await Role.findOne({ where: { name: "User" } });
+      if (defaultRole) {
+        roleData = { id: defaultRole.id, name: defaultRole.name };
+        selectedRoleId = defaultRole.id;
+      } else {
+        return res
+          .status(400)
+          .json({ error: "No role provided and no default User role found" });
+      }
+    }
+
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    // Save user hashed password
+
+    // Save user with hashed password
     const user = await User.create({
       name,
       email,
       hashPassword: hashedPassword,
-      role,
+      roleId: selectedRoleId,
     });
+
     console.log("User created:", user);
     return res.status(201).json({
       message: "User created successfully",
@@ -54,7 +98,8 @@ async function postUser(req, res) {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: roleData, // Returns { id: ..., name: ... }
+        // roleId: user.roleId,
       },
     });
   } catch (err) {
@@ -126,7 +171,10 @@ async function resetPassword(req, res) {
 // GET /users
 async function getUser(req, res) {
   try {
-    const result = await paginate(User, req.query, ["name", "email"]); // search in name & email
+    const result = await paginate(User, req.query, ["name", "email"], {
+      include: [{ model: Role }],
+    });
+    // search in name & email
     return res.json(result);
   } catch (err) {
     console.log({ error: err.message }, "Error in getUser >>>>");
@@ -137,9 +185,34 @@ async function getUser(req, res) {
 async function getUserById(req, res) {
   try {
     const { id } = req.params;
-    const user = await User.findByPk(id);
+    // const allRoles = await Role.findAll();
+    const allPermissions = await Permission.findAll();
+    const user = await User.findByPk(id, {
+      include: [
+        {
+          model: Role,
+          include: [
+            {
+              model: Permission,
+              through: { attributes: [] }, // Exclude (RolePermissions) join table data
+            },
+          ],
+        },
+        {
+          model: Permission,
+          through: { attributes: [] },
+        },
+      ],
+    });
     if (!user) return res.status(404).json({ error: "User not found" });
-    return res.json(user);
+    const userData = user.toJSON();
+
+    // Rename standard 'Permissions' to 'userPermissions' for clarity
+    userData.userPermissions = userData.Permissions;
+    delete userData.Permissions;
+
+    userData.allPermissions = allPermissions;
+    return res.json(userData);
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

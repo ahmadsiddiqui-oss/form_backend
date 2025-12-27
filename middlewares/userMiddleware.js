@@ -67,9 +67,9 @@ async function validateSignup(req, res, next) {
     if (emailExists) {
       return res.status(400).json({ error: "Email already exists" });
     }
-    const allowedRoles = ["Admin", "Manager", "User"];
+    const allowedRoles = [role];
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ error: "Invalid role" });
+      return res.status(400).json({ error: "Invalid roles...!" });
     }
     // Everything valid → continue
     next();
@@ -85,7 +85,21 @@ const auth = async (req, res, next) => {
     if (typeof tokenHeader != "undefined") {
       const token = tokenHeader.split(" ")[1];
       // console.log(token, "<<token>>");
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        if (
+          err.name === "TokenExpiredError" &&
+          (req.originalUrl.endsWith("/logout") || req.path.endsWith("/logout"))
+        ) {
+          decoded = jwt.verify(token, process.env.JWT_SECRET, {
+            ignoreExpiration: true,
+          });
+        } else {
+          throw err;
+        }
+      }
       // console.log(decoded, "<<decoded user>>");
 
       // 2️⃣ Check in database (match email + token)
@@ -94,6 +108,7 @@ const auth = async (req, res, next) => {
           email: decoded.email,
           authToken: token,
         },
+        include: ["Role"], // This will fetch the Role model and populate user.Role
       });
       // console.log(user.id, "<<Authenticated user>>");
       if (!user) {
@@ -177,6 +192,7 @@ async function validateUpdateUser(req, res, next) {
 async function validateDeleteUser(req, res, next) {
   try {
     const id = parseInt(req.params.id);
+    console.log(id, "<<id>>");
 
     // 1. Check if id is valid number
     if (isNaN(id)) {
@@ -185,12 +201,14 @@ async function validateDeleteUser(req, res, next) {
 
     // 2. Check if user exists
     const user = await User.findByPk(id);
+    console.log(user,"User not found");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
     // Attach user to request for controller
     req.user = user;
+    console.log(req.user.id, "<<req.user.id>>");
 
     next();
   } catch (err) {
@@ -204,7 +222,7 @@ async function validateResetPassword(req, res, next) {
     const { password } = req.body;
 
     // 1. Check if password is provided
-    if (!password) {
+    if (!password) {x
       return res.status(400).json({ error: "Password is required" });
     }
 
@@ -250,37 +268,22 @@ async function validateForgotPassword(req, res, next) {
 
 function authorizeRoles(...allowedRoles) {
   return (req, res, next) => {
-    const userRole = req.loginUser.role;
-    console.log(userRole, "<<userRole>>");
-    if (!allowedRoles.includes(userRole)) {
+    // userRole should come from the JOINED Role table (e.g., user.Role.name)
+    const userRole = req.loginUser.Role
+      ? req.loginUser.Role.name.toLowerCase()
+      : null;
+
+    console.log(req.loginUser.Role, "<<Full Role Object>>");
+    console.log(userRole, "<<Extracted Role Name>>");
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
       console.log(allowedRoles, "allowedRoles");
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({ error: "Access deniedssssss" });
     }
 
     next();
   };
 }
-
-// function authorizeRoles(...allowedRoles) {
-//   return (req, res, next) => {
-//     if (!allowedRoles.includes(req.user.role)) {
-//       return res.status(403).json({
-//         error: "Access Denied"
-//       });
-//     }
-//     next();
-//   };
-// }
-
-// middleware/role.js
-// function authorize(allowedRoles = []) {
-//   return (req, res, next) => {
-//     if (!allowedRoles.includes(req.user.role)) {
-//       return res.status(403).json({ error: "Access denied" });
-//     }
-//     next();
-//   };
-// }
 
 module.exports = {
   auth,
