@@ -10,6 +10,7 @@ const permissionRouter = require("./routes/permissionRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
 const cors = require("cors");
 const app = express(); // <<< MUST be declared first
+require("./utils/cronJob");
 
 app.use(
   cors({
@@ -41,7 +42,9 @@ app.use("/api/roleRoutes", roleRouter);
 app.use("/api/permissionRoutes", permissionRouter);
 
 // fallback 404
-app.use((req, res, next) => res.status(404).json({ error: "Not Foundss server.js!" }));
+app.use((req, res, next) =>
+  res.status(404).json({ error: "Not Foundss server.js!" })
+);
 
 // centralized error handler
 app.use(errorHandler);

@@ -38,6 +38,7 @@
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.11",
     "object-assign": "^4.1.1",
     "on-finished": "^2.4.1",

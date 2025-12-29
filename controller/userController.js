@@ -100,6 +100,8 @@ async function postUser(req, res) {
       hashPassword: hashedPassword,
       roleId: selectedRoleId,
     });
+    const rolePermissions = await getRolePermissions(selectedRoleId);
+    const userPermissions = await saveUserPermissions(user.id, rolePermissions);
 
     console.log("User created:", user);
     return res.status(201).json({
@@ -195,18 +197,11 @@ async function getUser(req, res) {
 async function getUserById(req, res) {
   try {
     const { id } = req.params;
-    // const allRoles = await Role.findAll();
     const allPermissions = await Permission.findAll();
     const user = await User.findByPk(id, {
       include: [
         {
           model: Role,
-          include: [
-            {
-              model: Permission,
-              through: { attributes: [] }, // Exclude (RolePermissions) join table data
-            },
-          ],
         },
         {
           model: Permission,
@@ -217,12 +212,24 @@ async function getUserById(req, res) {
     if (!user) return res.status(404).json({ error: "User not found" });
     const userData = user.toJSON();
 
-    // Rename standard 'Permissions' to 'userPermissions' for clarity
-    userData.userPermissions = userData.Permissions;
-    delete userData.Permissions;
+    // Combine Role Permissions and Direct User Permissions
+    const rolePermissions = userData.Role?.Permissions || [];
+    const directUserPermissions = userData.Permissions || [];
 
-    userData.allPermissions = allPermissions;
+    // Merge and deduplicate by ID
+    const combinedPermissions = [...rolePermissions, ...directUserPermissions];
+    const uniquePermissions = Array.from(
+      new Map(combinedPermissions.map((p) => [p.id, p])).values()
+    );
+
+    // Assign to userPermissions as requested
+    userData.userPermissions = uniquePermissions;
+    // Cleanup redundant fields
+    delete userData.Permissions;
+    if (userData.Role) delete userData.Role.Permissions;
+
     userData.profileImage = user.profileImage;
+    userData.allPermissions = allPermissions;
 
     console.log("getUserById Response Data:", {
       id: userData.id,
