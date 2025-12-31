@@ -155,7 +155,7 @@ async function validateLogout(req, res, next) {
 async function validateUpdateUser(req, res, next) {
   try {
     const { id } = req.params;
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // 1. Check if id is provided
     if (!id) {
@@ -167,14 +167,12 @@ async function validateUpdateUser(req, res, next) {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    // // 3. Optional: Validate email format
-    // if (email && !/^\S+@\S+\.\S+$/.test(email)) {
-    //   return res.status(400).json({ error: "Invalid email format" });
-    // }
+    if(!role){
+      return res.status(401).json({ error: "Roole is not defined" });
+    }
 
     // 4. Optional: Check password length if provided
-    if (password && password.length < 6) {
+    if (password && password.length < 3) {
       return res
         .status(400)
         .json({ error: "Password must be at least 6 characters" });
@@ -201,9 +199,9 @@ async function validateDeleteUser(req, res, next) {
 
     // 2. Check if user exists
     const user = await User.findByPk(id);
-    console.log(user, "User not found");
+    console.log(user, "User not founds");
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not foundss" });
     }
 
     // Attach user to request for controller
@@ -212,7 +210,7 @@ async function validateDeleteUser(req, res, next) {
 
     next();
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message }, "de");
   }
 }
 
@@ -223,7 +221,6 @@ async function validateResetPassword(req, res, next) {
 
     // 1. Check if password is provided
     if (!password) {
-      x;
       return res.status(400).json({ error: "Password is required" });
     }
 
