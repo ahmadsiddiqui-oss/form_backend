@@ -167,7 +167,7 @@ async function validateUpdateUser(req, res, next) {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    if(!role){
+    if (!role) {
       return res.status(401).json({ error: "Roole is not defined" });
     }
 

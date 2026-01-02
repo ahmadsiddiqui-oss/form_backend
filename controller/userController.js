@@ -6,6 +6,11 @@ const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
 const { getUserPermissions } = require("../middlewares/permissionMiddleware");
 const { include } = require("underscore");
+const {
+  getRolePermissions,
+  saveUserPermissions,
+} = require("./permissionController.js");
+const { onboardingQueue } = require("../utils/emailQueue");
 
 // POST /login
 async function loginUser(req, res) {
@@ -82,17 +87,29 @@ async function postUser(req, res) {
       if (defaultRole) {
         roleData = { id: defaultRole.id, name: defaultRole.name };
         selectedRoleId = defaultRole.id;
+        console.log("SignUP is running");
       } else {
         return res
           .status(400)
           .json({ error: "No role provided and no default User role found" });
       }
     }
+    const job = await onboardingQueue.add(
+      "sendEmail",
+      {
+        email,
+        message: "Welcome to our app",
+      },
+      {
+        attempts: 3, // Retry 3 times if it fails
+        backoff: 5000, // Wait 5 seconds between retries
+      }
+    );
+    console.log("Email job added:", job.id);
 
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
     // Save user with hashed password
     const user = await User.create({
       name,
@@ -100,18 +117,25 @@ async function postUser(req, res) {
       hashPassword: hashedPassword,
       roleId: selectedRoleId,
     });
+
     const rolePermissions = await getRolePermissions(selectedRoleId);
     const userPermissions = await saveUserPermissions(user.id, rolePermissions);
 
-    console.log("User created:", user);
+    // console.log("User created:", user);
+    console.log("Signup Successful. Storing in DB:", {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roleId: user.roleId,
+    });
     return res.status(201).json({
       message: "User created successfully",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: roleData, // Returns { id: ..., name: ... }
-        profileImage: user.profileImage,
+        roleId: user.roleId,
+        permissions: userPermissions,
       },
     });
   } catch (err) {
@@ -300,103 +324,7 @@ async function logoutUser(req, res) {
   }
 }
 
-// Method to send email with Authors and Books table
-async function sendEmailToUser() {
-  try {
-    const authors = await Author.findAll();
-    const books = await Book.findAll();
-    const user = 'ahmad.siddiqui+1@invozone.dev';
-
-    if (!user) return;
-
-    let authorsTable = `
-      <h3>Authors</h3>
-      <table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;">
-        <thead>
-          <tr style="background-color: #f2f2f2;">
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${authors
-            .map(
-              (a) => `
-            <tr>
-              <td>${a.id}</td>
-              <td>${a.name}</td>
-              <td>${a.email}</td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    `;
-
-    let booksTable = `
-      <h3>Books</h3>
-      <table border="1" cellpadding="5" style="border-collapse: collapse; width: 100%;">
-        <thead>
-          <tr style="background-color: #f2f2f2;">
-            <th>ID</th>
-            <th>Title</th>
-            <th>ISBN</th>
-            <th>Author ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${books
-            .map(
-              (b) => `
-            <tr>
-              <td>${b.id}</td>
-              <td>${b.title}</td>
-              <td>${b.isbn}</td>
-              <td>${b.authorId}</td>
-            </tr>
-          `
-            )
-            .join("")}
-        </tbody>
-      </table>
-    `;
-
-    const htmlContent = `
-      <h2>Data Report</h2>
-      ${authorsTable}
-      <br/>
-      ${booksTable}
-    `;
-
-    // Send to all users
-    if (user) {
-      await sendEmail(user, "Author & Book Report", htmlContent);
-    }
-
-    console.log("Scheduled report email sent to all users.");
-  } catch (err) {
-    console.error("Error in sendEmailToUser job:", err.message);
-  }
-}
-
 // Helper to get permissions for a role
-async function getRolePermissions(roleId) {
-  const role = await Role.findByPk(roleId, {
-    include: [{ model: Permission, through: { attributes: [] } }],
-  });
-  return role ? role.Permissions.map((p) => p.id) : [];
-}
-
-// Helper to save permissions for a user
-async function saveUserPermissions(userId, permissionIds) {
-  const user = await User.findByPk(userId);
-  if (user && permissionIds.length > 0) {
-    await user.setPermissions(permissionIds);
-  }
-  return permissionIds;
-}
 
 module.exports = {
   logoutUser,
@@ -408,5 +336,4 @@ module.exports = {
   getUserById,
   updateUser,
   deleteUser,
-  sendEmailToUser,
 };

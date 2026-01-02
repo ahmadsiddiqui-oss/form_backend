@@ -1,7 +1,7 @@
 const cron = require("node-cron");
 const { User } = require("../models/index");
 const { Op } = require("sequelize");
-const { sendEmailToUser } = require("../controller/userController");
+const { sendEmailToUser } = require("../controller/emailController");
 
 // Setup a cron job to clean up expired reset tokens every hour
 
