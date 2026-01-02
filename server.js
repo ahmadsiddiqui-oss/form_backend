@@ -7,7 +7,6 @@ const booksRouter = require("./routes/bookRoute");
 const fileRouter = require("./routes/fileRoute");
 const roleRouter = require("./routes/roleRoute");
 const permissionRouter = require("./routes/permissionRoute");
-// const bullRouter = require("./routes/bullRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
 const cors = require("cors");
 const app = express();
@@ -37,7 +36,6 @@ app.use("/api/authRoutes", authRouter);
 app.use("/api/fileRoutes", fileRouter);
 app.use("/api/roleRoutes", roleRouter);
 app.use("/api/permissionRoutes", permissionRouter);
-// app.use("/api/bullRoutes", bullRouter);
 
 // fallback 404
 app.use((req, res, next) =>

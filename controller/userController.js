@@ -121,7 +121,6 @@ async function postUser(req, res) {
     const rolePermissions = await getRolePermissions(selectedRoleId);
     const userPermissions = await saveUserPermissions(user.id, rolePermissions);
 
-    // console.log("User created:", user);
     console.log("Signup Successful. Storing in DB:", {
       id: user.id,
       name: user.name,
@@ -323,8 +322,6 @@ async function logoutUser(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-
-// Helper to get permissions for a role
 
 module.exports = {
   logoutUser,

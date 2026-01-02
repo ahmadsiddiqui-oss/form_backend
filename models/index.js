@@ -51,4 +51,3 @@ module.exports = {
   Permission,
   RolePermissions,
 };
-// module.export db;
