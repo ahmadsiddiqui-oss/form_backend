@@ -3,7 +3,6 @@ const paginate = require("../utils/paginate.js");
 const { Book } = db;
 
 async function postBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const payload = req.body;
     const { title, isbn, publishedDate, authorId } = payload;
@@ -47,7 +46,6 @@ async function getBook(req, res) {
 
 
 async function getBookById(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const row = await Book.findByPk(id);
@@ -59,7 +57,6 @@ async function getBookById(req, res) {
 }
 
 async function updateBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const payload = req.body;
@@ -73,7 +70,6 @@ async function updateBook(req, res) {
 }
 
 async function deleteBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const deleted = await Book.destroy({ where: { id } });

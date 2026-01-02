@@ -81,10 +81,8 @@ async function validateSignup(req, res, next) {
 const auth = async (req, res, next) => {
   try {
     const tokenHeader = req.headers["authorization"];
-    // console.log(req.headers, "<<header>>");
     if (typeof tokenHeader != "undefined") {
       const token = tokenHeader.split(" ")[1];
-      // console.log(token, "<<token>>");
       let decoded;
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -100,8 +98,6 @@ const auth = async (req, res, next) => {
           throw err;
         }
       }
-      // console.log(decoded, "<<decoded user>>");
-
       // 2️⃣ Check in database (match email + token)
       const user = await User.findOne({
         where: {
@@ -110,7 +106,6 @@ const auth = async (req, res, next) => {
         },
         include: ["Role"], // This will fetch the Role model and populate user.Role
       });
-      // console.log(user.id, "<<Authenticated user>>");
       if (!user) {
         return res
           .status(401)
@@ -118,8 +113,6 @@ const auth = async (req, res, next) => {
       }
       req.token = user;
       req.loginUser = user;
-      // req.params.id = user.id;
-      // console.log(req.loginUser.id, "<<loginUser-id>>");
       next();
     } else {
       res.status(401).json({ error: "No token provided" });
@@ -132,20 +125,15 @@ const auth = async (req, res, next) => {
 async function validateLogout(req, res, next) {
   try {
     const user = req.loginUser;
-    console.log(user.id, "<<Users id>>");
-
     if (!user) {
       return res.status(401).json({ error: "User not logged in" });
     }
-    console.log(user.id, "<<Logout User");
     // 2. Check if user exists
     const existsUser = await User.findByPk(user.id);
-    console.log(existsUser, "<<existsUser>>");
     if (!existsUser) {
       return res.status(404).json({ error: "User not found" });
     }
     req.user = existsUser;
-    console.log(req.user.id, existsUser, "<<Logout User id>>");
     next();
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -155,7 +143,7 @@ async function validateLogout(req, res, next) {
 async function validateUpdateUser(req, res, next) {
   try {
     const { id } = req.params;
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
 
     // 1. Check if id is provided
     if (!id) {
@@ -167,14 +155,12 @@ async function validateUpdateUser(req, res, next) {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    // // 3. Optional: Validate email format
-    // if (email && !/^\S+@\S+\.\S+$/.test(email)) {
-    //   return res.status(400).json({ error: "Invalid email format" });
-    // }
+    if (!role) {
+      return res.status(401).json({ error: "Roole is not defined" });
+    }
 
     // 4. Optional: Check password length if provided
-    if (password && password.length < 6) {
+    if (password && password.length < 3) {
       return res
         .status(400)
         .json({ error: "Password must be at least 6 characters" });
@@ -201,9 +187,9 @@ async function validateDeleteUser(req, res, next) {
 
     // 2. Check if user exists
     const user = await User.findByPk(id);
-    console.log(user, "User not found");
+    console.log(user, "User not founds");
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "User not foundss" });
     }
 
     // Attach user to request for controller
@@ -212,7 +198,7 @@ async function validateDeleteUser(req, res, next) {
 
     next();
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message }, "de");
   }
 }
 
@@ -223,7 +209,6 @@ async function validateResetPassword(req, res, next) {
 
     // 1. Check if password is provided
     if (!password) {
-      x;
       return res.status(400).json({ error: "Password is required" });
     }
 

@@ -1,11 +1,16 @@
 const db = require("../models/index.js");
-const { User, Role, Permission } = db;
+const { User, Role, Permission, Author, Book } = db;
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
 const { getUserPermissions } = require("../middlewares/permissionMiddleware");
 const { include } = require("underscore");
+const {
+  getRolePermissions,
+  saveUserPermissions,
+} = require("./permissionController.js");
+const { onboardingQueue } = require("../utils/emailQueue");
 
 // POST /login
 async function loginUser(req, res) {
@@ -82,17 +87,29 @@ async function postUser(req, res) {
       if (defaultRole) {
         roleData = { id: defaultRole.id, name: defaultRole.name };
         selectedRoleId = defaultRole.id;
+        console.log("SignUP is running");
       } else {
         return res
           .status(400)
           .json({ error: "No role provided and no default User role found" });
       }
     }
+    const job = await onboardingQueue.add(
+      "sendEmail",
+      {
+        email,
+        message: "Welcome to our app",
+      },
+      {
+        attempts: 3, // Retry 3 times if it fails
+        backoff: 5000, // Wait 5 seconds between retries
+      }
+    );
+    console.log("Email job added:", job.id);
 
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
     // Save user with hashed password
     const user = await User.create({
       name,
@@ -100,18 +117,24 @@ async function postUser(req, res) {
       hashPassword: hashedPassword,
       roleId: selectedRoleId,
     });
+
     const rolePermissions = await getRolePermissions(selectedRoleId);
     const userPermissions = await saveUserPermissions(user.id, rolePermissions);
 
-    console.log("User created:", user);
+    console.log("Signup Successful. Storing in DB:", {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roleId: user.roleId,
+    });
     return res.status(201).json({
       message: "User created successfully",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: roleData, // Returns { id: ..., name: ... }
-        profileImage: user.profileImage,
+        roleId: user.roleId,
+        permissions: userPermissions,
       },
     });
   } catch (err) {
@@ -246,12 +269,32 @@ async function getUserById(req, res) {
 async function updateUser(req, res) {
   try {
     const { id } = req.params; // get id from URL
-    const { email, password } = req.body; // updated data
+    const { email, password, role } = req.body; // updated data
     const user = req.user; // coming from middleware
 
     // Only update provided fields
     if (email) user.email = email;
-    if (password) user.password = password;
+
+    // 🔐 HASH PASSWORD
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.hashPassword = await bcrypt.hash(password, salt);
+    }
+
+    if (role) {
+      const oldRoleId = user.roleId;
+      user.roleId = role;
+
+      // If the role has changed, update permissions to match the new role
+      if (oldRoleId != role) {
+        const rolePermissions = await getRolePermissions(role);
+        // setPermissions will remove old direct permissions and set the new ones
+        await user.setPermissions(rolePermissions);
+      }
+    }
+
+    await user.save();
+    return res.json({ message: "User updated successfully" });
   } catch (err) {
     console.log({ error: err.message }, "<<<<<<updateError>>>>>>");
     return res.status(500).json({ error: err.message });
@@ -261,9 +304,9 @@ async function updateUser(req, res) {
 async function deleteUser(req, res) {
   try {
     const user = req.user; // coming from middleware
+    if (!user) return res.status(404).json({ error: "User not found" });
     await user.destroy();
-    if (!deleted) return res.status(404).json({ error: "User not found" });
-    return res.json({ message: "User deleted" });
+    return res.json({ message: "User deleted successfully" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

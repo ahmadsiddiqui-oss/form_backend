@@ -9,7 +9,7 @@ const roleRouter = require("./routes/roleRoute");
 const permissionRouter = require("./routes/permissionRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
 const cors = require("cors");
-const app = express(); // <<< MUST be declared first
+const app = express();
 require("./utils/cronJob");
 
 app.use(
@@ -22,10 +22,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// optional middlewares
-// app.use(helmet());
-// app.use(morgan('dev'));
-// static files
 app.use("/api/uploads", express.static("uploads"));
 // health api
 app.get("/api/health", (req, res) => {

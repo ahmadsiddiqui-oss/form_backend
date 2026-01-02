@@ -61,4 +61,20 @@ async function assignPermissions(req, res) {
   }
 }
 
-module.exports = { getPermission, assignPermissions };
+async function getRolePermissions(roleId) {
+  const role = await Role.findByPk(roleId, {
+    include: [{ model: Permission, through: { attributes: [] } }],
+  });
+  return role ? role.Permissions.map((p) => p.id) : [];
+}
+
+// Helper to save permissions for a user
+async function saveUserPermissions(userId, permissionIds) {
+  const user = await User.findByPk(userId);
+  if (user && permissionIds.length > 0) {
+    await user.setPermissions(permissionIds);
+  }
+  return permissionIds;
+}
+
+module.exports = { getPermission, assignPermissions, getRolePermissions, saveUserPermissions };
