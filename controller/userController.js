@@ -10,7 +10,7 @@ const {
   getRolePermissions,
   saveUserPermissions,
 } = require("./permissionController.js");
-const { onboardingQueue } = require("../utils/emailQueue");
+const emailQueue = require("../utils/emailQueue.js");
 
 // POST /login
 async function loginUser(req, res) {
@@ -94,18 +94,13 @@ async function postUser(req, res) {
           .json({ error: "No role provided and no default User role found" });
       }
     }
-    const job = await onboardingQueue.add(
-      "sendEmail",
+    await emailQueue.add(
       {
+        event:"sendEmail",
         email,
         message: "Welcome to our app",
       },
-      {
-        attempts: 3, // Retry 3 times if it fails
-        backoff: 5000, // Wait 5 seconds between retries
-      }
     );
-    console.log("Email job added:", job.id);
 
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
