@@ -1,4 +1,5 @@
 const db = require("../models/index.js");
+const emailQueue = require("../utils/emailQueue.js");
 const { Author } = db;
 const paginate = require("../utils/paginate.js");
 // POST /authors
@@ -12,7 +13,12 @@ async function postAuthor(req, res) {
       return res.status(400).json({ error: "Email already exists" });
     }
     const author = await Author.create({ name, email });
-    console.log("Author created:", author);
+    await emailQueue.add({
+      event: "sendSlackMessage",
+      entity: "Author",
+      payload: author.toJSON(),
+    });
+
     return res.status(201).json(author);
   } catch (err) {
     return res.status(500).json({ error: err.message });

@@ -122,6 +122,13 @@ async function postUser(req, res) {
       email: user.email,
       roleId: user.roleId,
     });
+
+    await emailQueue.add({
+      event: "sendSlackMessage",
+      entity: "User",
+      payload: user.toJSON(),
+    });
+
     return res.status(201).json({
       message: "User created successfully",
       user: {
@@ -276,13 +283,13 @@ async function updateUser(req, res) {
       user.hashPassword = await bcrypt.hash(password, salt);
     }
 
-    if (role) {
+    if (role.id) {
       const oldRoleId = user.roleId;
-      user.roleId = role;
+      user.roleId = role.id;
 
       // If the role has changed, update permissions to match the new role
-      if (oldRoleId != role) {
-        const rolePermissions = await getRolePermissions(role);
+      if (oldRoleId != role.id) {
+        const rolePermissions = await getRolePermissions(role.id);
         // setPermissions will remove old direct permissions and set the new ones
         await user.setPermissions(rolePermissions);
       }

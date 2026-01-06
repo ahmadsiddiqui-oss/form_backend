@@ -1,29 +1,23 @@
 const db = require("../models/index.js");
 const paginate = require("../utils/paginate.js");
 const { Book } = db;
+const emailQueue = require("../utils/emailQueue.js");
 
 async function postBook(req, res) {
   try {
     const payload = req.body;
-    const { title, isbn, publishedDate, authorId } = payload;
-    if (!title) {
-      return res.status(400).json({ error: "Title is required" });
-    }
-    if (!isbn) {
-      return res.status(400).json({ error: "ISBN is required" });
-    }
+    const { isbn } = payload;
     const existsIsbn = await Book.findOne({ where: { isbn } });
     if (existsIsbn) {
       return res.status(400).json({ error: "ISBN already exists" });
     }
-    if (!authorId) {
-      return res.status(400).json({ error: "Author ID is required" });
-    }
-    if (publishedDate && isNaN(Date.parse(publishedDate))) {
-      return res.status(400).json({ error: "Published date is invalid" });
-    }
-    const created = await Book.create(payload);
-    return res.status(201).json(created);
+    const book = await Book.create(payload);
+    await emailQueue.add({
+      event: "sendSlackMessage",
+      entity: "Book",
+      payload: book.toJSON(),
+    });
+    return res.status(201).json(book);
   } catch (err) {
     return res.status(500).json({ error: err.message }, "err");
   }
@@ -43,7 +37,6 @@ async function getBook(req, res) {
     return res.status(500).json({ error: err.message });
   }
 }
-
 
 async function getBookById(req, res) {
   try {
