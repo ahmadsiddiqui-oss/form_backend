@@ -178,8 +178,6 @@ async function validateUpdateUser(req, res, next) {
 async function validateDeleteUser(req, res, next) {
   try {
     const id = parseInt(req.params.id);
-    console.log(id, "<<id>>");
-
     // 1. Check if id is valid number
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid ID format" });
@@ -187,14 +185,12 @@ async function validateDeleteUser(req, res, next) {
 
     // 2. Check if user exists
     const user = await User.findByPk(id);
-    console.log(user, "User not founds");
     if (!user) {
       return res.status(404).json({ error: "User not foundss" });
     }
 
     // Attach user to request for controller
     req.user = user;
-    console.log(req.user.id, "<<req.user.id>>");
 
     next();
   } catch (err) {
@@ -258,15 +254,10 @@ function authorizeRoles(...allowedRoles) {
     const userRole = req.loginUser.Role
       ? req.loginUser.Role.name.toLowerCase()
       : null;
-
-    console.log(req.loginUser.Role, "<<Full Role Object>>");
-    console.log(userRole, "<<Extracted Role Name>>");
-
     // Convert allowed roles to lowercase for case-insensitive comparison
     const allowedRolesLower = allowedRoles.map((r) => r.toLowerCase());
 
     if (!userRole || !allowedRolesLower.includes(userRole)) {
-      console.log(allowedRoles, "allowedRoles");
       return res.status(403).json({ error: "Access deniedssssss" });
     }
 

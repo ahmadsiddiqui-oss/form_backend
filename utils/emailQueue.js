@@ -59,7 +59,7 @@ emailQueue
   .on("completed", (job, result) => {
     console.log(
       `Job ${job.id} completed with result:`,
-      JSON.stringify(job)
+      JSON.stringify(job.data)
     );
   })
   .on("failed", (job, err) => {

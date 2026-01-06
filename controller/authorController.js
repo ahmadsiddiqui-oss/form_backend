@@ -29,7 +29,6 @@ async function postAuthor(req, res) {
 async function getAuthor(req, res) {
   try {
     const authors = await paginate(Author, req.query, ["name", "email"]);
-    console.log(authors, "authors");
     return res.json(authors);
   } catch (err) {
     console.log({ error: err.message }, "eerrrrrrrororor>>>>>>");
@@ -57,7 +56,6 @@ async function updateAuthor(req, res) {
     if (!id)
       return res.status(400).json({ error: "id is required for update" });
     const author = await Author.findByPk(id);
-    console.log(id);
     if (!author) return res.status(404).json({ error: "Author not found" });
     await author.update({ id, name, email });
     return res.json(author);

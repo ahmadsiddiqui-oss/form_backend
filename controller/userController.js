@@ -38,15 +38,6 @@ async function loginUser(req, res) {
     );
     user.authToken = token;
     await user.save();
-    // Debug log to see what's being sent
-    console.log("Login Response User:", {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.Role ? user.Role.name : null,
-      profileImage: user.profileImage,
-    });
-
     // Success
     return res.json({
       message: "Login successful",
@@ -68,7 +59,6 @@ async function loginUser(req, res) {
 async function postUser(req, res) {
   try {
     const { name, email, password, role } = req.body;
-    console.log("Received data:", { name, email, password, role });
 
     let roleData = null; // Object to store { id, name }
     let selectedRoleId = null;
@@ -152,7 +142,6 @@ async function forgotPassword(req, res) {
     const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    console.log(req.body.email, "<--email in controller");
     // Save token and expiry
     await User.update(
       {
