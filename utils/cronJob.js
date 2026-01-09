@@ -30,7 +30,7 @@ cron.schedule("0 */2 * * *", async () => {
 });
 
 // New Cron Job: Send Author & Book report every minute
-cron.schedule("0 */2 * * *", async () => {
+cron.schedule("0 0 * * *", async () => {
   console.log("Running scheduled task: Sending Author & Book report...");
   await sendEmailToUser();
 });

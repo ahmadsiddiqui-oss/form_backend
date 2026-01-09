@@ -1,7 +1,7 @@
 const db = require("../models/index.js");
 const paginate = require("../utils/paginate.js");
 const { Book } = db;
-const emailQueue = require("../utils/emailQueue.js");
+const messageQueue = require("../queue/messageQueue.js");
 
 async function postBook(req, res) {
   try {
@@ -12,7 +12,7 @@ async function postBook(req, res) {
       return res.status(400).json({ error: "ISBN already exists" });
     }
     const book = await Book.create(payload);
-    await emailQueue.add({
+    await messageQueue.add({
       event: "sendSlackMessage",
       entity: "Book",
       payload: book.toJSON(),

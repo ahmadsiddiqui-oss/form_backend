@@ -6,11 +6,9 @@ const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
 const { getUserPermissions } = require("../middlewares/permissionMiddleware");
 const { include } = require("underscore");
-const {
-  getRolePermissions,
-  saveUserPermissions,
-} = require("./permissionController.js");
-const emailQueue = require("../utils/emailQueue.js");
+const { getRolePermissions } = require("./permissionController.js");
+const emailQueue = require("../queue/emailQueue.js");
+const messageQueue = require("../queue/messageQueue.js");
 
 // POST /login
 async function loginUser(req, res) {
@@ -84,13 +82,6 @@ async function postUser(req, res) {
           .json({ error: "No role provided and no default User role found" });
       }
     }
-    await emailQueue.add(
-      {
-        event:"sendEmail",
-        email,
-        message: "Welcome to our app",
-      },
-    );
 
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
@@ -114,6 +105,12 @@ async function postUser(req, res) {
     });
 
     await emailQueue.add({
+      event: "sendEmail",
+      email,
+      message: "Welcome to our app",
+    });
+
+    await messageQueue.add({
       event: "sendSlackMessage",
       entity: "User",
       payload: user.toJSON(),

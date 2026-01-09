@@ -38,9 +38,7 @@ app.use("/api/roleRoutes", roleRouter);
 app.use("/api/permissionRoutes", permissionRouter);
 
 // fallback 404
-app.use((req, res, next) =>
-  res.status(404).json({ error: "Not Foundss server.js!" })
-);
+app.use((req, res, next) => res.status(404).json({ error: "Not Found!" }));
 
 // centralized error handler
 app.use(errorHandler);

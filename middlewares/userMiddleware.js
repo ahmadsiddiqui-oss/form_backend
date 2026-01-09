@@ -191,7 +191,6 @@ async function validateDeleteUser(req, res, next) {
 
     // Attach user to request for controller
     req.user = user;
-
     next();
   } catch (err) {
     return res.status(500).json({ error: err.message }, "de");
@@ -202,12 +201,10 @@ async function validateResetPassword(req, res, next) {
   try {
     const { token } = req.params;
     const { password } = req.body;
-
     // 1. Check if password is provided
     if (!password) {
       return res.status(400).json({ error: "Password is required" });
     }
-
     // 2. Verify token
     let decoded;
     try {
@@ -215,17 +212,14 @@ async function validateResetPassword(req, res, next) {
     } catch (err) {
       return res.status(400).json({ error: "Invalid or expired token" });
     }
-
     // 3. Check if user exists
     const user = await User.findOne({ where: { email: decoded.email } });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
     // 4. Attach user and password to req for controller
     req.user = user;
     req.newPassword = password;
-
     next();
   } catch (err) {
     return res.status(500).json({ error: err.message });
