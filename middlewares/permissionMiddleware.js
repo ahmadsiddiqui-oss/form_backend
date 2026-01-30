@@ -1,4 +1,4 @@
-const { Role, Permission, User } = require("../models");
+const { Role, Permission, User, UserPermissions } = require("../models");
 
 /**
  * Middleware to check if a user has a specific permission
@@ -60,7 +60,7 @@ function checkPermission(requiredPermission) {
       );
 
       console.log("Has permission from role?", hasPermission);
-      console.log("Has direct permission?", hasDirectPermission);
+      console.log("Has direct permission?", userWithPermissions);
 
       if (!hasPermission && !hasDirectPermission) {
         return res.status(403).json({
@@ -81,35 +81,35 @@ function checkPermission(requiredPermission) {
  * Get all permissions for a user (role-based + direct)
  */
 async function getUserPermissions(userId) {
+  console.log(userId);
   try {
     const user = await User.findByPk(userId, {
       include: [
-        {
-          model: Role,
-          include: [Permission],
-        },
         {
           model: Permission,
           through: { attributes: [] },
         },
       ],
     });
+    const userPermissions = UserPermissions || [];
+    console.log("user.dataValues.Permissions", user);
 
     if (!user) {
       return [];
     }
 
     // Combine role permissions and direct permissions
-    const rolePermissions = user.Role?.Permissions || [];
-    const directPermissions = user.Permissions || [];
+    // const rolePermissions = user.Role?.Permissions || [];
+    // const directPermissions = user.UserPermissions?.Permissions || [];
 
     // Merge and deduplicate
-    const allPermissions = [...rolePermissions, ...directPermissions];
-    const uniquePermissions = Array.from(
-      new Map(allPermissions.map((p) => [p.id, p])).values()
-    );
+    // const allPermissions = [...rolePermissions, ...directPermissions];
+    // const uniquePermissions = Array.from(
+    //   new Map(allPermissions.map((p) => [p.id, p])).values()
+    // );
 
-    return uniquePermissions.map((p) => p.name);
+    // return uniquePermissions.map((p) => p.name);
+    return user.dataValues.Permissions.map((p) => p.name);
   } catch (err) {
     console.error("Error getting user permissions:", err);
     return [];

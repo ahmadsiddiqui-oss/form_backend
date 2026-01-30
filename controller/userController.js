@@ -6,7 +6,7 @@ const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
 const { getUserPermissions } = require("../middlewares/permissionMiddleware");
 const { include } = require("underscore");
-const { getRolePermissions } = require("./permissionController.js");
+const { getRolePermissions, saveUserPermissions } = require("./permissionController.js");
 const emailQueue = require("../queue/emailQueue.js");
 const messageQueue = require("../queue/messageQueue.js");
 
@@ -123,7 +123,8 @@ async function postUser(req, res) {
         name: user.name,
         email: user.email,
         roleId: user.roleId,
-        permissions: userPermissions,
+        permissions: [], // permissions are inherited from role
+        userPermissions: userPermissions,
       },
     });
   } catch (err) {
@@ -213,6 +214,7 @@ async function getUserById(req, res) {
       include: [
         {
           model: Role,
+          include: [Permission],
         },
         {
           model: Permission,
@@ -224,29 +226,33 @@ async function getUserById(req, res) {
     const userData = user.toJSON();
 
     // Combine Role Permissions and Direct User Permissions
-    const rolePermissions = userData.Role?.Permissions || [];
+    // const rolePermissions = userData.Role?.Permissions || [];
     const directUserPermissions = userData.Permissions || [];
 
     // Merge and deduplicate by ID
-    const combinedPermissions = [...rolePermissions, ...directUserPermissions];
-    const uniquePermissions = Array.from(
-      new Map(combinedPermissions.map((p) => [p.id, p])).values()
-    );
+    // const combinedPermissions = [...directUserPermissions];
+    // const uniquePermissions = Array.from(
+    //   new Map(combinedPermissions.map((p) => [p.id, p])).values()
+    // );
 
     // Assign to userPermissions as requested
-    userData.userPermissions = uniquePermissions;
+    userData.directUserPermissions = directUserPermissions;
+    const DirectUserPermissions = Array.from(
+      new Map(directUserPermissions.map((p) => [p.id, p])).values()
+    );
+    userData.userPermissions = DirectUserPermissions;
     // Cleanup redundant fields
     delete userData.Permissions;
     if (userData.Role) delete userData.Role.Permissions;
 
     userData.profileImage = user.profileImage;
     userData.allPermissions = allPermissions;
-
-    console.log("getUserById Response Data:", {
-      id: userData.id,
-      name: userData.name,
-      profileImage: userData.profileImage,
-    });
+    console.log(directUserPermissions, "directUserPermissions");
+    // console.log("getUserById Response Data:", {
+    //   id: userData.id,
+    //   name: userData.name,
+    //   profileImage: userData.profileImage,
+    // });
 
     return res.json(userData);
   } catch (err) {

@@ -35,6 +35,7 @@ async function validateLogin(req, res, next) {
         error: "Backend Error..! Email doesn't exists",
       });
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.hashPassword);
     if (!isPasswordValid) {
       return res.status(400).json({
