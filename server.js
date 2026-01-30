@@ -9,7 +9,7 @@ const roleRouter = require("./routes/roleRoute");
 const permissionRouter = require("./routes/permissionRoute");
 const { errorHandler } = require("./middlewares/errorHandler");
 const cors = require("cors");
-const app = express(); // <<< MUST be declared first
+const app = express();
 require("./utils/cronJob");
 
 app.use(
@@ -22,10 +22,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// optional middlewares
-// app.use(helmet());
-// app.use(morgan('dev'));
-// static files
 app.use("/api/uploads", express.static("uploads"));
 // health api
 app.get("/api/health", (req, res) => {
@@ -42,9 +38,7 @@ app.use("/api/roleRoutes", roleRouter);
 app.use("/api/permissionRoutes", permissionRouter);
 
 // fallback 404
-app.use((req, res, next) =>
-  res.status(404).json({ error: "Not Foundss server.js!" })
-);
+app.use((req, res, next) => res.status(404).json({ error: "Not Found!" }));
 
 // centralized error handler
 app.use(errorHandler);

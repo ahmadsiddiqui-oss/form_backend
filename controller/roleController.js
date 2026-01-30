@@ -6,7 +6,6 @@ async function getRole(req, res) {
     const roles = await Role.findAll({
       include: [{ model: Permission }],
     });
-    console.log(roles);
     return res.json(roles);
   } catch (err) {
     console.log({ error: err.message }, "getRole error");
@@ -17,7 +16,6 @@ async function getRole(req, res) {
 async function assignPermissions(req, res) {
   try {
     const { roleIds, permissionIds } = req.body;
-    console.log(roleIds, permissionIds, " role and permiission");
     // 1. Find the Role
     const role = await Role.findByPk(roleIds);
     if (!role) {

@@ -1,4 +1,5 @@
 const db = require("../models/index.js");
+const messageQueue = require("../queue/messageQueue.js");
 const { Author } = db;
 const paginate = require("../utils/paginate.js");
 // POST /authors
@@ -12,7 +13,12 @@ async function postAuthor(req, res) {
       return res.status(400).json({ error: "Email already exists" });
     }
     const author = await Author.create({ name, email });
-    console.log("Author created:", author);
+    await messageQueue.add({
+      event: "sendSlackMessage",
+      entity: "Author",
+      payload: author.toJSON(),
+    });
+
     return res.status(201).json(author);
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -23,7 +29,6 @@ async function postAuthor(req, res) {
 async function getAuthor(req, res) {
   try {
     const authors = await paginate(Author, req.query, ["name", "email"]);
-    console.log(authors, "authors");
     return res.json(authors);
   } catch (err) {
     console.log({ error: err.message }, "eerrrrrrrororor>>>>>>");
@@ -51,7 +56,6 @@ async function updateAuthor(req, res) {
     if (!id)
       return res.status(400).json({ error: "id is required for update" });
     const author = await Author.findByPk(id);
-    console.log(id);
     if (!author) return res.status(404).json({ error: "Author not found" });
     await author.update({ id, name, email });
     return res.json(author);

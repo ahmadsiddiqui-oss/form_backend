@@ -1,11 +1,14 @@
 const db = require("../models/index.js");
-const { User, Role, Permission } = db;
+const { User, Role, Permission, Author, Book } = db;
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const sendEmail = require("../utils/email");
 const paginate = require("../utils/paginate.js");
 const { getUserPermissions } = require("../middlewares/permissionMiddleware");
 const { include } = require("underscore");
+const { getRolePermissions, saveUserPermissions } = require("./permissionController.js");
+const emailQueue = require("../queue/emailQueue.js");
+const messageQueue = require("../queue/messageQueue.js");
 
 // POST /login
 async function loginUser(req, res) {
@@ -33,15 +36,6 @@ async function loginUser(req, res) {
     );
     user.authToken = token;
     await user.save();
-    // Debug log to see what's being sent
-    console.log("Login Response User:", {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.Role ? user.Role.name : null,
-      profileImage: user.profileImage,
-    });
-
     // Success
     return res.json({
       message: "Login successful",
@@ -63,7 +57,6 @@ async function loginUser(req, res) {
 async function postUser(req, res) {
   try {
     const { name, email, password, role } = req.body;
-    console.log("Received data:", { name, email, password, role });
 
     let roleData = null; // Object to store { id, name }
     let selectedRoleId = null;
@@ -82,6 +75,7 @@ async function postUser(req, res) {
       if (defaultRole) {
         roleData = { id: defaultRole.id, name: defaultRole.name };
         selectedRoleId = defaultRole.id;
+        console.log("SignUP is running");
       } else {
         return res
           .status(400)
@@ -92,7 +86,6 @@ async function postUser(req, res) {
     // 🔐 HASH PASSWORD
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
     // Save user with hashed password
     const user = await User.create({
       name,
@@ -100,18 +93,38 @@ async function postUser(req, res) {
       hashPassword: hashedPassword,
       roleId: selectedRoleId,
     });
+
     const rolePermissions = await getRolePermissions(selectedRoleId);
     const userPermissions = await saveUserPermissions(user.id, rolePermissions);
 
-    console.log("User created:", user);
+    console.log("Signup Successful. Storing in DB:", {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roleId: user.roleId,
+    });
+
+    await emailQueue.add({
+      event: "sendEmail",
+      email,
+      message: "Welcome to our app",
+    });
+
+    await messageQueue.add({
+      event: "sendSlackMessage",
+      entity: "User",
+      payload: user.toJSON(),
+    });
+
     return res.status(201).json({
       message: "User created successfully",
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: roleData, // Returns { id: ..., name: ... }
-        profileImage: user.profileImage,
+        roleId: user.roleId,
+        permissions: [], // permissions are inherited from role
+        userPermissions: userPermissions,
       },
     });
   } catch (err) {
@@ -127,7 +140,6 @@ async function forgotPassword(req, res) {
     const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    console.log(req.body.email, "<--email in controller");
     // Save token and expiry
     await User.update(
       {
@@ -202,6 +214,7 @@ async function getUserById(req, res) {
       include: [
         {
           model: Role,
+          include: [Permission],
         },
         {
           model: Permission,
@@ -213,29 +226,33 @@ async function getUserById(req, res) {
     const userData = user.toJSON();
 
     // Combine Role Permissions and Direct User Permissions
-    const rolePermissions = userData.Role?.Permissions || [];
+    // const rolePermissions = userData.Role?.Permissions || [];
     const directUserPermissions = userData.Permissions || [];
 
     // Merge and deduplicate by ID
-    const combinedPermissions = [...rolePermissions, ...directUserPermissions];
-    const uniquePermissions = Array.from(
-      new Map(combinedPermissions.map((p) => [p.id, p])).values()
-    );
+    // const combinedPermissions = [...directUserPermissions];
+    // const uniquePermissions = Array.from(
+    //   new Map(combinedPermissions.map((p) => [p.id, p])).values()
+    // );
 
     // Assign to userPermissions as requested
-    userData.userPermissions = uniquePermissions;
+    userData.directUserPermissions = directUserPermissions;
+    const DirectUserPermissions = Array.from(
+      new Map(directUserPermissions.map((p) => [p.id, p])).values()
+    );
+    userData.userPermissions = DirectUserPermissions;
     // Cleanup redundant fields
     delete userData.Permissions;
     if (userData.Role) delete userData.Role.Permissions;
 
     userData.profileImage = user.profileImage;
     userData.allPermissions = allPermissions;
-
-    console.log("getUserById Response Data:", {
-      id: userData.id,
-      name: userData.name,
-      profileImage: userData.profileImage,
-    });
+    console.log(directUserPermissions, "directUserPermissions");
+    // console.log("getUserById Response Data:", {
+    //   id: userData.id,
+    //   name: userData.name,
+    //   profileImage: userData.profileImage,
+    // });
 
     return res.json(userData);
   } catch (err) {
@@ -246,12 +263,32 @@ async function getUserById(req, res) {
 async function updateUser(req, res) {
   try {
     const { id } = req.params; // get id from URL
-    const { email, password } = req.body; // updated data
+    const { email, password, role } = req.body; // updated data
     const user = req.user; // coming from middleware
 
     // Only update provided fields
     if (email) user.email = email;
-    if (password) user.password = password;
+
+    // 🔐 HASH PASSWORD
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.hashPassword = await bcrypt.hash(password, salt);
+    }
+
+    if (role.id) {
+      const oldRoleId = user.roleId;
+      user.roleId = role.id;
+
+      // If the role has changed, update permissions to match the new role
+      if (oldRoleId != role.id) {
+        const rolePermissions = await getRolePermissions(role.id);
+        // setPermissions will remove old direct permissions and set the new ones
+        await user.setPermissions(rolePermissions);
+      }
+    }
+
+    await user.save();
+    return res.json({ message: "User updated successfully" });
   } catch (err) {
     console.log({ error: err.message }, "<<<<<<updateError>>>>>>");
     return res.status(500).json({ error: err.message });
@@ -261,9 +298,9 @@ async function updateUser(req, res) {
 async function deleteUser(req, res) {
   try {
     const user = req.user; // coming from middleware
+    if (!user) return res.status(404).json({ error: "User not found" });
     await user.destroy();
-    if (!deleted) return res.status(404).json({ error: "User not found" });
-    return res.json({ message: "User deleted" });
+    return res.json({ message: "User deleted successfully" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

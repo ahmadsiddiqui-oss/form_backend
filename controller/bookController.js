@@ -1,30 +1,23 @@
 const db = require("../models/index.js");
 const paginate = require("../utils/paginate.js");
 const { Book } = db;
+const messageQueue = require("../queue/messageQueue.js");
 
 async function postBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const payload = req.body;
-    const { title, isbn, publishedDate, authorId } = payload;
-    if (!title) {
-      return res.status(400).json({ error: "Title is required" });
-    }
-    if (!isbn) {
-      return res.status(400).json({ error: "ISBN is required" });
-    }
+    const { isbn } = payload;
     const existsIsbn = await Book.findOne({ where: { isbn } });
     if (existsIsbn) {
       return res.status(400).json({ error: "ISBN already exists" });
     }
-    if (!authorId) {
-      return res.status(400).json({ error: "Author ID is required" });
-    }
-    if (publishedDate && isNaN(Date.parse(publishedDate))) {
-      return res.status(400).json({ error: "Published date is invalid" });
-    }
-    const created = await Book.create(payload);
-    return res.status(201).json(created);
+    const book = await Book.create(payload);
+    await messageQueue.add({
+      event: "sendSlackMessage",
+      entity: "Book",
+      payload: book.toJSON(),
+    });
+    return res.status(201).json(book);
   } catch (err) {
     return res.status(500).json({ error: err.message }, "err");
   }
@@ -45,9 +38,7 @@ async function getBook(req, res) {
   }
 }
 
-
 async function getBookById(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const row = await Book.findByPk(id);
@@ -59,7 +50,6 @@ async function getBookById(req, res) {
 }
 
 async function updateBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const payload = req.body;
@@ -73,7 +63,6 @@ async function updateBook(req, res) {
 }
 
 async function deleteBook(req, res) {
-  // if (!book) return modelMissing(res);
   try {
     const { id } = req.params;
     const deleted = await Book.destroy({ where: { id } });
